@@ -1,0 +1,7 @@
+2026-01-23 21:02:09,076 | INFO     | nbogne | Configuration loaded from: config/default.yaml
+2026-01-23 21:02:09,077 | INFO     | nbogne | Dry run - configuration validated successfully
+2026-01-23 21:02:09,077 | INFO     | nbogne |   Facility: FAC-001 (Sample Health Facility)
+2026-01-23 21:02:09,078 | INFO     | nbogne |   Mediator: https://mediator.example.com/gsm/inbound
+2026-01-23 21:02:09,078 | INFO     | nbogne |   EMR: openmrs at http://localhost:8080
+2026-01-23 21:02:09,078 | INFO     | nbogne |   Queue: data/outbox.db
+2026-01-23 21:02:09,079 | INFO     | nbogne |   Server: 0.0.0.0:8080/fhir
