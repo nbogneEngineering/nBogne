@@ -32,7 +32,7 @@ mediator:
   endpoint: "https://mediator.example.com/gsm/inbound"
   
   # Phone number for SMS fallback (Africa's Talking format)
-  sms_number: "+233000000000"
+  sms_number: "+233549253610"
   
   # Optional API key for authentication
   # Set via environment variable NBOGNE_MEDIATOR_API_KEY for security
@@ -158,7 +158,7 @@ server:
   host: "0.0.0.0"
   
   # Port number
-  port: 8080
+  port: 8081
   
   # URL path for FHIR endpoint
   path: "/fhir"
