@@ -1,0 +1,84 @@
+# =============================================================================
+# nBogne Adapter - Facility Deployment
+# =============================================================================
+# This runs at the FACILITY side (rural clinic).
+# OpenMRS is assumed to be running separately or included here.
+#
+# Usage:
+#   docker-compose up -d
+#
+# Components:
+#   - adapter:   nBogne Adapter (receives from OpenMRS, sends to central)
+#   - dashboard: Web UI for monitoring and manual sends
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # nBogne Adapter
+  # ---------------------------------------------------------------------------
+  # Receives FHIR from OpenMRS, queues, transmits over GPRS/2G to central
+  # ---------------------------------------------------------------------------
+  adapter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nbogne-adapter
+    ports:
+      - "8081:8081"
+    environment:
+      # Facility identification
+      - NBOGNE_FACILITY_ID=FAC-001
+      - NBOGNE_FACILITY_NAME=Rural Health Center
+      
+      # Central mediator (OpenHIM) - CHANGE THIS to your central server IP
+      - NBOGNE_MEDIATOR_ENDPOINT=http://CENTRAL_SERVER_IP:5001/gsm/inbound
+      
+      # Logging
+      - NBOGNE_LOG_LEVEL=INFO
+    volumes:
+      - adapter_data:/app/data
+      - adapter_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - nbogne-network
+
+  # ---------------------------------------------------------------------------
+  # nBogne Dashboard
+  # ---------------------------------------------------------------------------
+  # Web UI for health workers to send referrals and monitor queue
+  # ---------------------------------------------------------------------------
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: nbogne-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      # OpenMRS connection - CHANGE THIS to your OpenMRS container/IP
+      - OPENMRS_URL=http://openmrs:8080/openmrs/ws/fhir2/R4
+      
+      # Adapter connection (internal Docker network)
+      - ADAPTER_URL=http://adapter:8081
+      
+      # Display name
+      - FACILITY_NAME=Rural Health Center
+    depends_on:
+      - adapter
+    restart: unless-stopped
+    networks:
+      - nbogne-network
+
+volumes:
+  adapter_data:
+  adapter_logs:
+
+networks:
+  nbogne-network:
+    driver: bridge
+    
+  # If OpenMRS is in another Docker network, connect to it:
+  # openmrs-network:
+  #   external: true

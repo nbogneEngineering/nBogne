@@ -1,0 +1,22 @@
+# =============================================================================
+# nBogne Adapter Dependencies
+# =============================================================================
+# Core dependencies for production use
+# =============================================================================
+
+# HTTP client with retry support
+requests>=2.28.0,<3.0.0
+
+# YAML configuration parsing
+PyYAML>=6.0,<7.0
+
+# =============================================================================
+# Development Dependencies (optional)
+# =============================================================================
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+
+# Note: The following are NOT required for production:
+# - pytest (testing)
+# - black (formatting)
+# - mypy (type checking)
+# - ruff (linting)
