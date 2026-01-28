@@ -83,8 +83,16 @@ nbogne-adapter/
 │   ├── config.py              # Configuration management
 │   └── exceptions.py          # Custom error types
 │
-├── ui/                         # WEB DASHBOARD
-│   └── dashboard.py           # Streamlit UI for health workers
+├── ui/                         # WEB DASHBOARD (Flask)
+│   ├── app.py                 # Flask application
+│   └── templates/             # HTML templates
+│       ├── base.html
+│       ├── index.html
+│       ├── patients.html
+│       ├── send.html
+│       ├── manual.html
+│       ├── queue.html
+│       └── settings.html
 │
 ├── scripts/                    # CLI TOOLS
 │   ├── run_adapter.py         # Start the adapter
@@ -271,7 +279,11 @@ export OPENMRS_URL=http://localhost:8080/openmrs/ws/fhir2/R4
 export ADAPTER_URL=http://localhost:8081
 export FACILITY_NAME="My Clinic"
 
-streamlit run ui/dashboard.py
+# Run with Flask dev server
+python -m ui.app
+
+# Or with gunicorn (production)
+gunicorn -w 2 -b 0.0.0.0:8501 ui.app:app
 ```
 
 ### Local Testing (No OpenMRS)
@@ -284,9 +296,9 @@ python -m scripts.mock_mediator --port 9000
 python -m scripts.run_adapter --config config/local.yaml
 
 # Terminal 3: Start dashboard
-streamlit run ui/dashboard.py
+python -m ui.app
 
-# Use Manual Entry tab to send test data
+# Go to http://localhost:8501/manual to send test data
 ```
 
 ---

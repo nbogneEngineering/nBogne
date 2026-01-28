@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="header">
+  <h2>Dashboard</h2>
+</div>
+
+<!-- Connection Status -->
+<div class="card">
+  <div class="card-title">Connection Status</div>
+  <div style="display: flex; gap: 2rem;">
+    <div class="status {{ 'status-ok' if openmrs_ok else 'status-error' }}">
+      <span class="status-dot"></span>
+      <span>OpenMRS: {{ 'Connected' if openmrs_ok else 'Disconnected' }}</span>
+    </div>
+    <div class="status {{ 'status-ok' if adapter_ok else 'status-error' }}">
+      <span class="status-dot"></span>
+      <span>Adapter: {{ 'Connected' if adapter_ok else 'Disconnected' }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Queue Stats -->
+{% if stats %}
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.pending or 0 }}</div>
+    <div class="stat-label">Pending</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.sending or 0 }}</div>
+    <div class="stat-label">Sending</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.acked or 0 }}</div>
+    <div class="stat-label">Delivered</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.failed or 0 }}</div>
+    <div class="stat-label">Failed</div>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <p class="text-muted">Queue statistics unavailable. Check adapter connection.</p>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="card">
+  <div class="card-title">Quick Actions</div>
+  <div style="display: flex; gap: 1rem;">
+    <a href="{{ url_for('patients') }}" class="btn btn-primary">Search Patients</a>
+    <a href="{{ url_for('manual') }}" class="btn btn-secondary">Manual Entry</a>
+    <a href="{{ url_for('queue') }}" class="btn btn-secondary">View Queue</a>
+  </div>
+</div>
+
+<!-- Endpoints -->
+<div class="card">
+  <div class="card-title">Configured Endpoints</div>
+  <table class="table">
+    <tr>
+      <td class="text-muted">OpenMRS FHIR</td>
+      <td><code>{{ openmrs_url }}</code></td>
+    </tr>
+    <tr>
+      <td class="text-muted">Adapter</td>
+      <td><code>{{ adapter_url }}</code></td>
+    </tr>
+  </table>
+</div>
+{% endblock %}

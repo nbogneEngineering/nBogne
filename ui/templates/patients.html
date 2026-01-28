@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Patients{% endblock %}
+
+{% block content %}
+<div class="header">
+  <h2>Patient Search</h2>
+</div>
+
+{% if not openmrs_ok %}
+<div class="alert alert-error">
+  Cannot connect to OpenMRS. Check your connection settings.
+</div>
+{% endif %}
+
+<form class="search-form" method="GET" action="{{ url_for('patients') }}">
+  <input type="text" name="q" class="form-input" placeholder="Search by name..." value="{{ query }}">
+  <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+{% if patients %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Gender</th>
+        <th>Birth Date</th>
+        <th>ID</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for patient in patients %}
+      <tr>
+        <td><strong>{{ patient.name }}</strong></td>
+        <td>{{ patient.gender | capitalize }}</td>
+        <td>{{ patient.birthDate or '—' }}</td>
+        <td><code class="text-small">{{ patient.id[:8] }}...</code></td>
+        <td>
+          <a href="{{ url_for('send_patient', patient_id=patient.id) }}" class="btn btn-primary">Send</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif query %}
+<div class="card">
+  <p class="text-muted">No patients found matching "{{ query }}"</p>
+</div>
+{% else %}
+<div class="card">
+  <p class="text-muted">Enter a name to search for patients.</p>
+</div>
+{% endif %}
+{% endblock %}

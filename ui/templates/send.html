@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Send Patient Data{% endblock %}
+
+{% block content %}
+<div class="header">
+  <h2>Send Patient Data</h2>
+</div>
+
+<div class="card">
+  <div class="card-title">Patient Information</div>
+  <p><strong>{{ patient_name }}</strong></p>
+  <p class="text-muted text-small">ID: {{ patient.id }}</p>
+</div>
+
+<div class="card">
+  <form method="POST">
+    <div class="form-group">
+      <label class="form-label">Destination Facility</label>
+      <input type="text" name="destination" class="form-input" value="CENTRAL" required>
+      <small class="text-muted">Facility code where data should be sent</small>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Priority (1-10)</label>
+      <select name="priority" class="form-select">
+        <option value="1">1 - Low</option>
+        <option value="3">3</option>
+        <option value="5" selected>5 - Normal</option>
+        <option value="7">7</option>
+        <option value="10">10 - Urgent</option>
+      </select>
+    </div>
+    
+    <div style="display: flex; gap: 1rem;">
+      <button type="submit" class="btn btn-primary">Send to Adapter</button>
+      <a href="{{ url_for('patients') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-title">FHIR Data Preview</div>
+  <pre style="background: #f1f5f9; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.75rem;">{{ patient | tojson(indent=2) }}</pre>
+</div>
+{% endblock %}

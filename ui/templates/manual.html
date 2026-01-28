@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Entry{% endblock %}
+
+{% block content %}
+<div class="header">
+  <h2>Manual FHIR Entry</h2>
+</div>
+
+<div class="card">
+  <form method="POST">
+    <div class="form-group">
+      <label class="form-label">Destination Facility</label>
+      <input type="text" name="destination" class="form-input" value="CENTRAL" required>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Priority (1-10)</label>
+      <select name="priority" class="form-select">
+        <option value="1">1 - Low</option>
+        <option value="5" selected>5 - Normal</option>
+        <option value="10">10 - Urgent</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">FHIR JSON Data</label>
+      <textarea name="fhir_data" class="form-textarea" placeholder='{"resourceType": "Patient", ...}' required></textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Send to Adapter</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-title">Example FHIR Patient</div>
+  <pre style="background: #f1f5f9; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.75rem;">{
+  "resourceType": "Patient",
+  "id": "example-123",
+  "name": [{
+    "family": "Doe",
+    "given": ["John"]
+  }],
+  "gender": "male",
+  "birthDate": "1990-01-15"
+}</pre>
+</div>
+{% endblock %}

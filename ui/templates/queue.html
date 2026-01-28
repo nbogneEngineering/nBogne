@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Queue Status{% endblock %}
+
+{% block content %}
+<div class="header">
+  <h2>Queue Status</h2>
+  <a href="{{ url_for('queue') }}" class="btn btn-secondary">Refresh</a>
+</div>
+
+{% if not adapter_ok %}
+<div class="alert alert-error">
+  Cannot connect to adapter. Check your connection settings.
+</div>
+{% endif %}
+
+{% if stats %}
+<!-- Queue Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.pending or 0 }}</div>
+    <div class="stat-label">Pending</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.sending or 0 }}</div>
+    <div class="stat-label">Sending</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.acked or 0 }}</div>
+    <div class="stat-label">Delivered</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.failed or 0 }}</div>
+    <div class="stat-label">Failed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.dead or 0 }}</div>
+    <div class="stat-label">Dead Letter</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.queue.total or 0 }}</div>
+    <div class="stat-label">Total</div>
+  </div>
+</div>
+
+<!-- Transmitter Status -->
+<div class="card mt-2">
+  <div class="card-title">Transmitter</div>
+  <table class="table">
+    <tr>
+      <td class="text-muted">Status</td>
+      <td>
+        <span class="status {{ 'status-ok' if stats.transmitter.running else 'status-error' }}">
+          <span class="status-dot"></span>
+          {{ 'Running' if stats.transmitter.running else 'Stopped' }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td class="text-muted">Total Sent</td>
+      <td>{{ stats.transmitter.total_sent or 0 }}</td>
+    </tr>
+    <tr>
+      <td class="text-muted">Total Errors</td>
+      <td>{{ stats.transmitter.total_errors or 0 }}</td>
+    </tr>
+    {% if stats.transmitter.last_send %}
+    <tr>
+      <td class="text-muted">Last Send</td>
+      <td>{{ stats.transmitter.last_send }}</td>
+    </tr>
+    {% endif %}
+  </table>
+</div>
+
+<!-- Receiver Status -->
+<div class="card">
+  <div class="card-title">Receiver</div>
+  <table class="table">
+    <tr>
+      <td class="text-muted">Status</td>
+      <td>
+        <span class="status {{ 'status-ok' if stats.receiver.running else 'status-error' }}">
+          <span class="status-dot"></span>
+          {{ 'Running' if stats.receiver.running else 'Stopped' }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td class="text-muted">Total Received</td>
+      <td>{{ stats.receiver.total_received or 0 }}</td>
+    </tr>
+    <tr>
+      <td class="text-muted">Total Queued</td>
+      <td>{{ stats.receiver.total_queued or 0 }}</td>
+    </tr>
+  </table>
+</div>
+
+{% else %}
+<div class="card">
+  <p class="text-muted">Queue statistics unavailable.</p>
+</div>
+{% endif %}
+{% endblock %}
