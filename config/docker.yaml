@@ -1,0 +1,61 @@
+# =============================================================================
+# nBogne Adapter - Docker Configuration
+# =============================================================================
+# Use environment variables to override these values.
+# =============================================================================
+
+facility:
+  id: "${NBOGNE_FACILITY_ID:-FAC-001}"
+  name: "${NBOGNE_FACILITY_NAME:-Health Facility}"
+  phone_number: "${NBOGNE_FACILITY_PHONE:-+233549253610}"
+
+mediator:
+  # Central OpenHIM server - set via NBOGNE_MEDIATOR_ENDPOINT
+  endpoint: "${NBOGNE_MEDIATOR_ENDPOINT:-http://localhost:5001/gsm/inbound}"
+  sms_number: "${NBOGNE_MEDIATOR_SMS:-+233549253610}"
+  api_key: "${NBOGNE_MEDIATOR_API_KEY:-}"
+
+emr:
+  type: "openmrs"
+  base_url: "${NBOGNE_EMR_URL:-http://openmrs:8080}"
+  fhir_endpoint: "/openmrs/ws/fhir2/R4"
+  auth_token: "${NBOGNE_EMR_TOKEN:-}"
+  polling_interval: 0
+
+transmission:
+  # GPRS-optimized timeouts
+  timeout_connect: 30.0
+  timeout_read: 120.0
+  max_retries: 5
+  base_delay: 3.0
+  max_delay: 300.0
+  jitter: true
+  keepalive_interval: 55.0
+
+queue:
+  db_path: "/app/data/outbox.db"
+  max_size: 10000
+  batch_size: 10
+  drain_interval: 5.0
+  retention_days: 30
+
+modem:
+  port: "${NBOGNE_MODEM_PORT:-/dev/ttyUSB0}"
+  baudrate: 115200
+  apn: "${NBOGNE_MODEM_APN:-internet}"
+  apn_user: ""
+  apn_password: ""
+  pin: null
+  model: "auto"
+
+server:
+  host: "0.0.0.0"
+  port: 8082
+  path: "/fhir"
+
+logging:
+  level: "${NBOGNE_LOG_LEVEL:-INFO}"
+  file: "/app/logs/nbogne.log"
+  max_bytes: 10485760
+  backup_count: 5
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
