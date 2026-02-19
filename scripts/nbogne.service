@@ -1,0 +1,20 @@
+[Unit]
+Description=nBogne Health Data Transport
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/nbogne/main.py
+WorkingDirectory=/opt/nbogne
+Restart=always
+RestartSec=10
+User=root
+StandardOutput=journal
+StandardError=journal
+
+# Watchdog: systemd restarts if daemon hangs
+WatchdogSec=300
+
+[Install]
+WantedBy=multi-user.target

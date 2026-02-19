@@ -1,22 +1,10 @@
-# =============================================================================
-# nBogne Adapter Dependencies
-# =============================================================================
-# Core dependencies for production use
-# =============================================================================
+# ── Raspberry Pi (device side) ────────────────────────────
+pyserial>=3.5
+RPi.GPIO>=0.7.1       # Only works on Raspberry Pi
 
-# HTTP client with retry support
-requests>=2.28.0,<3.0.0
+# ── Server side ──────────────────────────────────────────
+flask>=3.0
+africastalking>=1.2    # For SMS trigger sender
 
-# YAML configuration parsing
-PyYAML>=6.0,<7.0
-
-# =============================================================================
-# Development Dependencies (optional)
-# =============================================================================
-# Install with: pip install -r requirements.txt -r requirements-dev.txt
-
-# Note: The following are NOT required for production:
-# - pytest (testing)
-# - black (formatting)
-# - mypy (type checking)
-# - ruff (linting)
+# ── Testing ──────────────────────────────────────────────
+pytest>=7.0
