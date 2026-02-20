@@ -1,7 +1,7 @@
 """
 Tests for encoding module. Run anywhere — no hardware needed.
 
-  python3 -m pytest tests/test_encoding.py -v
+  python -m pytest tests/test_encoding.py -v
 """
 
 import sys, os

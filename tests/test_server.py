@@ -2,7 +2,7 @@
 Test the server USSD callback handler locally.
 Simulates what Africa's Talking sends when a device dials your shortcode.
 
-  python3 tests/test_server.py
+  python tests/test_server.py
 """
 
 import sys, os

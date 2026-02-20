@@ -129,7 +129,7 @@ sudo reboot
 
 # After reboot, test hardware:
 cd /opt/nbogne
-python3 tests/test_modem_hw.py
+python tests/test_modem_hw.py
 
 # Start the daemon
 sudo systemctl start nbogne
@@ -144,7 +144,7 @@ pip install flask africastalking
 
 # Start the USSD callback server
 cd server
-python3 app.py
+python app.py
 # Runs on port 5000
 
 # For production, use gunicorn:
@@ -197,14 +197,14 @@ nbogne-transport/
 
 ```bash
 # 1. Encoding tests
-python3 tests/test_encoding.py
-# or: python3 -m pytest tests/test_encoding.py -v
+python tests/test_encoding.py
+# or: python -m pytest tests/test_encoding.py -v
 
 # 2. Server callback tests
-python3 tests/test_server.py
+python tests/test_server.py
 
 # 3. Start server locally and test with curl
-python3 server/app.py &
+python server/app.py &
 
 # Simulate USSD session start
 curl -X POST http://localhost:5000/ussd \
@@ -230,14 +230,14 @@ curl -X POST http://localhost:5000/api/v1/data \
 # After install.sh and reboot:
 
 # Test modem hardware (signal, USSD, SMS)
-python3 tests/test_modem_hw.py
+python tests/test_modem_hw.py
 
 # Add a test record and check status
-python3 main.py --enqueue
-python3 main.py --status
+python main.py --enqueue
+python main.py --status
 
 # Start daemon in foreground to watch it work
-python3 main.py
+python main.py
 ```
 
 ### Phase 3: End-to-end (Pi ↔ Server)
@@ -247,7 +247,7 @@ python3 main.py
 # 2. Pi running daemon with correct shortcode in config
 
 # On the Pi: add a record
-python3 main.py --enqueue
+python main.py --enqueue
 
 # Watch Pi logs
 sudo journalctl -u nbogne -f
@@ -256,7 +256,7 @@ sudo journalctl -u nbogne -f
 tail -f /var/lib/nbogne-server/received.jsonl
 
 # Force immediate sync from server side (send SMS trigger)
-python3 server/sms_trigger.py +233549XXXXXX
+python server/sms_trigger.py +233549XXXXXX
 ```
 
 ### Africa's Talking Sandbox (free testing)

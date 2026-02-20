@@ -12,7 +12,7 @@ Handles the multi-step USSD session protocol:
 Setup:
   1. pip install flask
   2. Set your Africa's Talking callback URL to: https://yourserver.com/ussd
-  3. python3 server/app.py
+  3. python server/app.py
 """
 
 import uuid

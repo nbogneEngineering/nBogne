@@ -4,9 +4,9 @@ Sends SMS from server to Raspberry Pi devices to trigger immediate USSD sync.
 Uses Africa's Talking SMS API.
 
 Usage:
-  python3 server/sms_trigger.py +233549XXXXXX           # Trigger one device
-  python3 server/sms_trigger.py --all                    # Trigger all registered devices
-  python3 server/sms_trigger.py +233549XXXXXX CMD:STATUS # Send remote command
+  python server/sms_trigger.py +233549XXXXXX           # Trigger one device
+  python server/sms_trigger.py --all                    # Trigger all registered devices
+  python server/sms_trigger.py +233549XXXXXX CMD:STATUS # Send remote command
 """
 
 import sys
@@ -60,9 +60,9 @@ def trigger_all(message: str = 'FETCH:sync'):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 sms_trigger.py +233XXXXXXXXX              # Trigger sync")
-        print("  python3 sms_trigger.py +233XXXXXXXXX CMD:STATUS   # Remote command")
-        print("  python3 sms_trigger.py --all                      # Trigger all")
+        print("  python sms_trigger.py +233XXXXXXXXX              # Trigger sync")
+        print("  python sms_trigger.py +233XXXXXXXXX CMD:STATUS   # Remote command")
+        print("  python sms_trigger.py --all                      # Trigger all")
         sys.exit(1)
 
     if sys.argv[1] == '--all':

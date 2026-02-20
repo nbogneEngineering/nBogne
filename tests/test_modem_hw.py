@@ -2,7 +2,7 @@
 Hardware test — run on Raspberry Pi with SIM800C connected.
 Tests each modem capability independently.
 
-  python3 tests/test_modem_hw.py
+  python tests/test_modem_hw.py
 """
 
 import sys, os, time

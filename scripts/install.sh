@@ -11,7 +11,7 @@ echo "========================================"
 # ── 1. System packages ───────────────────────────────────
 echo "[1/6] Installing system packages..."
 apt-get update -qq
-apt-get install -y python3 python3-pip python3-venv git
+apt-get install -y python python-pip python-venv git
 
 # ── 2. Enable UART (disable Bluetooth on serial0) ───────
 echo "[2/6] Configuring UART..."
@@ -77,5 +77,5 @@ else
     echo "  4. Start: sudo systemctl start nbogne"
 fi
 echo ""
-echo "Test: python3 /opt/nbogne/tests/test_modem_hw.py"
+echo "Test: python /opt/nbogne/tests/test_modem_hw.py"
 echo "Logs: journalctl -u nbogne -f"

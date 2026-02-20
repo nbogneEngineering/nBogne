@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 nBogne Transport — Main Daemon
 Runs on Raspberry Pi at each health facility.
@@ -10,9 +10,9 @@ Loop:
   4. Watchdog runs in background thread checking modem health
 
 Usage:
-  python3 main.py                    # Run daemon
-  python3 main.py --enqueue          # Add test record to outbox
-  python3 main.py --status           # Print device state + outbox count
+  python main.py                    # Run daemon
+  python main.py --enqueue          # Add test record to outbox
+  python main.py --status           # Print device state + outbox count
 """
 
 import sys
