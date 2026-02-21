@@ -11,7 +11,7 @@ echo "========================================"
 # ── 1. System packages ───────────────────────────────────
 echo "[1/6] Installing system packages..."
 apt-get update -qq
-apt-get install -y python python-pip python-venv git
+apt-get install -y python3 python3-pip python3-venv git
 
 # ── 2. Enable UART (disable Bluetooth on serial0) ───────
 echo "[2/6] Configuring UART..."
@@ -50,8 +50,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cp "$SCRIPT_DIR"/*.py /opt/nbogne/
 chmod +x /opt/nbogne/main.py
 
-# ── 5. Python dependencies ───────────────────────────────
-echo "[5/6] Installing Python packages..."
+# ── 5. python3 dependencies ───────────────────────────────
+echo "[5/6] Installing python3 packages..."
 pip3 install pyserial RPi.GPIO --break-system-packages 2>/dev/null || \
 pip3 install pyserial RPi.GPIO
 
@@ -77,5 +77,5 @@ else
     echo "  4. Start: sudo systemctl start nbogne"
 fi
 echo ""
-echo "Test: python /opt/nbogne/tests/test_modem_hw.py"
+echo "Test: python3 /opt/nbogne/tests/test_modem_hw.py"
 echo "Logs: journalctl -u nbogne -f"

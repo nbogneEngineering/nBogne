@@ -13,7 +13,7 @@ MODEM_DTR_PIN = 24                # BCM GPIO → SIM800C DTR (sleep control)
 APN = 'internet'                  # MTN Ghana APN
 
 # ── USSD ─────────────────────────────────────────────────────
-USSD_SHORTCODE = '*384*72#'       # Your Africa's Talking shortcode
+USSD_SHORTCODE = '*384*72#'       # Your Afrifca's Talking shortcode
 USSD_TIMEOUT = 20                 # Seconds to wait per exchange
 USSD_CHAR_LIMIT = 178             # Safe GSM 7-bit limit per exchange
 
