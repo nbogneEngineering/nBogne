@@ -7,6 +7,9 @@ Proves the full nBogne pipeline works:
 Uses LoopbackTransport (no hardware needed).
 Run: python -m tests.test_e2e (from nbogne/ directory)
 """
+from adapter.receiver import ReceivingAdapter
+from adapter.sender import SendingAdapter
+from transport.sms import LoopbackTransport
 import sys
 import json
 import logging
@@ -15,9 +18,6 @@ from pathlib import Path
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from transport.sms import LoopbackTransport
-from adapter.sender import SendingAdapter
-from adapter.receiver import ReceivingAdapter
 
 logging.basicConfig(level=logging.INFO, format="%(name)s | %(message)s")
 log = logging.getLogger("test_e2e")
@@ -134,7 +134,8 @@ def run_test():
     server_modem = LoopbackTransport()
     facility_modem.connect(server_modem)
 
-    sender = SendingAdapter(transport=facility_modem, destination="+233000000000")
+    sender = SendingAdapter(transport=facility_modem,
+                            destination="+233000000000")
     receiver = ReceivingAdapter(transport=server_modem, forward_to="none")
 
     tests = [
@@ -153,18 +154,19 @@ def run_test():
         print(f"  Original FHIR JSON: {original_size:,} bytes")
 
         # SEND: facility → SMS segments
-        queue_id = sender.send_record(fhir_input, patient_record_id="test-patient")
+        queue_id = sender.send_record(
+            fhir_input, patient_record_id="test-patient")
 
         # Check what's in the server modem inbox
         inbox = server_modem.read_all_sms()
         print(f"  SMS segments sent: {len(inbox)}")
         for i, msg in enumerate(inbox):
-            print(f"    Segment {i+1}: {len(msg['text'])} chars")
+            print(f"    Segment {i+1}: {len(msg['data'])} bytes")
 
         # RECEIVE: SMS segments → FHIR JSON
         reconstructed = None
         for msg in inbox:
-            result = receiver.receive_sms(msg["text"], msg["from"])
+            result = receiver.receive_sms(msg["data"], msg["from"])
             if result:
                 reconstructed = result
 
@@ -183,8 +185,10 @@ def run_test():
         # Validate key fields survived
         passed = True
         if fhir_input.get("resourceType") == "Bundle":
-            orig_resources = {e["resource"]["resourceType"] for e in fhir_input.get("entry", [])}
-            recon_resources = {e["resource"]["resourceType"] for e in reconstructed.get("entry", [])}
+            orig_resources = {e["resource"]["resourceType"]
+                              for e in fhir_input.get("entry", [])}
+            recon_resources = {e["resource"]["resourceType"]
+                               for e in reconstructed.get("entry", [])}
 
             # Check vital signs survived
             orig_vitals = {}
@@ -208,15 +212,18 @@ def run_test():
                     print(f"  ❌ Missing observation: {code}")
                     passed = False
                 elif abs(float(orig_val) - float(recon_val)) > 0.1:
-                    print(f"  ❌ Value mismatch for {code}: {orig_val} → {recon_val}")
+                    print(
+                        f"  ❌ Value mismatch for {code}: {orig_val} → {recon_val}")
                     passed = False
 
         # Calculate compression stats
-        wire_size = sum(len(m["text"]) for m in inbox)
-        ratio = original_size / wire_size if wire_size else 0
+        wire_bytes_total = sum(len(m["data"]) for m in inbox)
+        ratio = original_size / wire_bytes_total if wire_bytes_total else 0
 
-        print(f"  Compressed wire: {wire_size:,} chars across {len(inbox)} SMS")
-        print(f"  Compression ratio: {ratio:.1f}x ({original_size:,}B → {wire_size:,} chars)")
+        print(
+            f"  Binary wire: {wire_bytes_total:,} bytes across {len(inbox)} SMS")
+        print(
+            f"  Compression ratio: {ratio:.1f}x ({original_size:,}B → {wire_bytes_total:,} bytes)")
         print(f"  ACK received: {'✓' if ack_received else '✗'}")
         print(f"  Values preserved: {'✓' if passed else '✗'}")
 

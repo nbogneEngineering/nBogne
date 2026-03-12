@@ -3,27 +3,28 @@ Wire Protocol
 
 Handles:
 1. Building wire packets (header + payload + CRC)
-2. SMS segmentation (splitting into 134-byte chunks)
-3. Base64 encoding for SMS text mode
-4. Reassembly from SMS segments
+2. SMS segmentation (binary segments, 134 bytes per GSM data SMS)
+3. Reassembly from SMS segments
+
+Binary SMS mode: each segment carries raw bytes (no Base64 overhead).
+Segment format: [1B index][1B total][up to 132B data] = max 134 bytes per segment.
 """
-import base64
 import struct
 import math
 from typing import Optional
 from config import SMS_BINARY_BYTES_PER_SEGMENT, SMS_MAX_SEGMENTS
 
+# Usable data bytes per segment after 2-byte framing header
+_DATA_PER_SEGMENT = SMS_BINARY_BYTES_PER_SEGMENT - 2  # 132
 
-def packet_to_sms_segments(wire_bytes: bytes) -> list[str]:
-    """Convert wire packet bytes to Base64-encoded SMS segments.
 
-    Each segment is a string that fits in one SMS (153 chars for concat, 160 for single).
-    Segments are prefixed with index: "01/03:..." for reassembly.
+def packet_to_sms_segments(wire_bytes: bytes) -> list[bytes]:
+    """Convert wire packet bytes to binary SMS segments.
+
+    Each segment is raw bytes: [1B index][1B total][data].
+    Max 134 bytes per segment (134 = GSM binary SMS capacity with UDH).
     """
-    b64 = base64.b64encode(wire_bytes).decode('ascii')
-    # Each SMS text segment: 153 chars max (concatenated), minus 6 chars for "NN/NN:" prefix
-    chars_per_segment = 147
-    total_segments = math.ceil(len(b64) / chars_per_segment)
+    total_segments = math.ceil(len(wire_bytes) / _DATA_PER_SEGMENT)
 
     if total_segments > SMS_MAX_SEGMENTS:
         raise ValueError(
@@ -33,29 +34,24 @@ def packet_to_sms_segments(wire_bytes: bytes) -> list[str]:
 
     segments = []
     for i in range(total_segments):
-        chunk = b64[i * chars_per_segment:(i + 1) * chars_per_segment]
-        prefix = f"{i+1:02d}/{total_segments:02d}:"
-        segments.append(prefix + chunk)
+        chunk = wire_bytes[i * _DATA_PER_SEGMENT:(i + 1) * _DATA_PER_SEGMENT]
+        header = struct.pack('!BB', i + 1, total_segments)
+        segments.append(header + chunk)
 
     return segments
 
 
-def sms_segments_to_packet(segments: list[str]) -> bytes:
-    """Reassemble SMS segments back to wire packet bytes.
+def sms_segments_to_packet(segments: list[bytes]) -> bytes:
+    """Reassemble binary SMS segments back to wire packet bytes.
 
-    Handles out-of-order arrival by sorting on prefix.
+    Handles out-of-order arrival by sorting on index byte.
     """
-    # Parse and sort segments
     parsed = []
     for seg in segments:
-        if '/' in seg[:5] and ':' in seg[:6]:
-            idx = int(seg[:2])
-            total = int(seg[3:5])
-            data = seg[6:]
-            parsed.append((idx, total, data))
-        else:
-            # No prefix — single segment
-            parsed.append((1, 1, seg))
+        idx = seg[0]
+        total = seg[1]
+        data = seg[2:]
+        parsed.append((idx, total, data))
 
     parsed.sort(key=lambda x: x[0])
 
@@ -68,14 +64,11 @@ def sms_segments_to_packet(segments: list[str]) -> bytes:
             missing = expected - received
             raise ValueError(f"Missing SMS segments: {missing}")
 
-    b64 = ''.join(p[2] for p in parsed)
-    return base64.b64decode(b64)
+    return b''.join(p[2] for p in parsed)
 
 
 def estimate_sms_count(payload_bytes: int) -> int:
     """Estimate how many SMS segments a payload will need."""
-    # Payload → L1 encrypt (+28) → wire header (~15) → L2 encrypt (+28) → Base64 (×4/3)
-    total_bytes = payload_bytes + 28 + 15 + 28  # ~71 bytes overhead
-    b64_chars = math.ceil(total_bytes * 4 / 3)
-    chars_per_segment = 147
-    return math.ceil(b64_chars / chars_per_segment)
+    # Payload → L1 encrypt (+16 tag) → wire header (~15) → L2 encrypt (+28) = ~59 bytes overhead
+    total_bytes = payload_bytes + 16 + 15 + 28
+    return math.ceil(total_bytes / _DATA_PER_SEGMENT)

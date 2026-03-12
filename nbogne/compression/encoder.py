@@ -15,6 +15,8 @@ import struct
 from datetime import date, datetime
 from typing import Any
 
+from compression.codebook import encode_code, decode_code, NOT_IN_CODEBOOK
+
 
 DATE_EPOCH = date(2020, 1, 1)
 
@@ -64,8 +66,16 @@ def _encode_field(val: Any, ftype: str, field_def: dict) -> bytes:
         return struct.pack('!H', max(0, min(65535, days)))
 
     elif ftype == "code":
-        # Codes stored as variable-length strings for now
-        # In production, these map to codebook indices (2 bytes)
+        codebook_name = field_def.get("codebook", "")
+        if codebook_name:
+            idx, found = encode_code(str(val), codebook_name)
+            if found:
+                return struct.pack('!H', idx)  # 2 bytes
+            else:
+                # Not in codebook: sentinel + inline string
+                s = str(val)[:20].encode('utf-8')
+                return struct.pack('!HB', NOT_IN_CODEBOOK, len(s)) + s
+        # No codebook specified, fall back to string
         s = str(val)[:20].encode('utf-8')
         return struct.pack('!B', len(s)) + s
 
@@ -81,6 +91,16 @@ def _encode_field(val: Any, ftype: str, field_def: dict) -> bytes:
 
     elif ftype == "float32":
         return struct.pack('!f', float(val))
+
+    elif ftype == "offset_uint8":
+        offset = field_def.get("offset", 0)
+        scale = field_def.get("scale", 1)
+        val_f = float(val)
+        if val_f == 0:  # missing
+            return struct.pack('!B', 0)
+        raw = int((val_f - offset) * scale)
+        raw = max(1, min(255, raw))  # 0 reserved for missing
+        return struct.pack('!B', raw)
 
     else:
         raise ValueError(f"Unknown field type: {ftype}")
@@ -107,6 +127,16 @@ def _decode_field(data: bytes, offset: int, ftype: str, field_def: dict):
         return d.strftime("%Y-%m-%d"), 2
 
     elif ftype == "code":
+        codebook_name = field_def.get("codebook", "")
+        if codebook_name:
+            idx = struct.unpack('!H', data[offset:offset + 2])[0]
+            if idx != NOT_IN_CODEBOOK:
+                return decode_code(idx, codebook_name), 2
+            else:
+                slen = data[offset + 2]
+                s = data[offset + 3:offset + 3 + slen].decode('utf-8')
+                return s, 3 + slen
+        # No codebook
         slen = data[offset]
         s = data[offset + 1:offset + 1 + slen].decode('utf-8')
         return s, 1 + slen
@@ -124,10 +154,19 @@ def _decode_field(data: bytes, offset: int, ftype: str, field_def: dict):
     elif ftype == "float32":
         return struct.unpack('!f', data[offset:offset + 4])[0], 4
 
+    elif ftype == "offset_uint8":
+        field_offset = field_def.get("offset", 0)
+        scale = field_def.get("scale", 1)
+        raw = data[offset]
+        if raw == 0:
+            return 0.0, 1
+        return round(raw / scale + field_offset, 1), 1
+
     else:
         raise ValueError(f"Unknown field type: {ftype}")
 
 
 def _default_for_type(ftype: str):
     return {"string": "", "text": "", "date": "", "code": "",
-            "uint8": 0, "uint16": 0, "float16": 0.0, "float32": 0.0}.get(ftype, "")
+            "uint8": 0, "uint16": 0, "float16": 0.0, "float32": 0.0,
+            "offset_uint8": 0.0}.get(ftype, "")

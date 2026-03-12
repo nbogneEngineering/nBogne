@@ -17,7 +17,12 @@ log = logging.getLogger("nbogne.transport.sms")
 
 
 class GammuTransport:
-    """Send/receive SMS via Gammu and USB modem."""
+    """Send/receive SMS via Gammu and USB modem.
+
+    Binary SMS mode: sends raw bytes using gammu's binary SMS support.
+    Requires python-gammu for full binary mode. Falls back to hex-encoded
+    text SMS if python-gammu is not available.
+    """
 
     def __init__(self, modem_port: str = "/dev/ttyUSB0", gammu_config: Optional[Path] = None):
         self.modem_port = modem_port
@@ -31,15 +36,20 @@ connection = at
 """)
         return config
 
-    def send_sms(self, number: str, text: str) -> bool:
-        """Send a single SMS text message via gammu."""
+    def send_sms(self, number: str, data: bytes) -> bool:
+        """Send a single binary SMS segment via gammu.
+        Encodes binary data as hex text for CLI compatibility.
+        TODO: Use python-gammu for native binary SMS (8-bit encoding)."""
         try:
+            # Encode binary as hex for gammu CLI text SMS
+            hex_text = data.hex()
             result = subprocess.run(
-                ["gammu", "-c", str(self.config_path), "sendsms", "TEXT", number, "-text", text],
+                ["gammu", "-c", str(self.config_path), "sendsms",
+                 "TEXT", number, "-text", hex_text],
                 capture_output=True, text=True, timeout=30
             )
             if result.returncode == 0:
-                log.info(f"SMS sent to {number}: {len(text)} chars")
+                log.info(f"SMS sent to {number}: {len(data)} bytes")
                 return True
             else:
                 log.error(f"SMS send failed: {result.stderr}")
@@ -51,11 +61,12 @@ connection = at
             log.error("gammu not installed. Install with: sudo apt install gammu")
             return False
 
-    def send_segments(self, number: str, segments: list[str]) -> bool:
-        """Send multiple SMS segments (concatenated message)."""
+    def send_segments(self, number: str, segments: list[bytes]) -> bool:
+        """Send multiple binary SMS segments."""
         success = True
         for i, seg in enumerate(segments):
-            log.info(f"Sending segment {i+1}/{len(segments)} ({len(seg)} chars)")
+            log.info(
+                f"Sending segment {i+1}/{len(segments)} ({len(seg)} bytes)")
             if not self.send_sms(number, seg):
                 success = False
                 break
@@ -104,7 +115,8 @@ connection = at
 
 class LoopbackTransport:
     """In-memory transport for testing without hardware.
-    Messages sent are immediately available for reading."""
+    Messages sent are immediately available for reading.
+    Handles binary SMS segments (bytes)."""
 
     def __init__(self):
         self.inbox: list[dict] = []
@@ -115,13 +127,14 @@ class LoopbackTransport:
         self._partner = partner
         partner._partner = self
 
-    def send_sms(self, number: str, text: str) -> bool:
+    def send_sms(self, number: str, data: bytes) -> bool:
         if self._partner:
-            self._partner.inbox.append({"from": number, "text": text, "location": str(len(self._partner.inbox))})
+            self._partner.inbox.append(
+                {"from": number, "data": data, "location": str(len(self._partner.inbox))})
             return True
         return False
 
-    def send_segments(self, number: str, segments: list[str]) -> bool:
+    def send_segments(self, number: str, segments: list[bytes]) -> bool:
         for seg in segments:
             if not self.send_sms(number, seg):
                 return False

@@ -44,9 +44,12 @@ class TransmissionLog:
                     quality_score REAL
                 )
             """)
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_log_ts ON transmission_log(timestamp)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_log_carrier ON transmission_log(carrier)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_log_outcome ON transmission_log(outcome)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_log_ts ON transmission_log(timestamp)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_log_carrier ON transmission_log(carrier)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_log_outcome ON transmission_log(outcome)")
 
     def log_send(self, msg_id: str, patient_record_id: str = "",
                  carrier: str = "", destination: str = "",
@@ -68,8 +71,8 @@ class TransmissionLog:
             """, (now, msg_id, patient_record_id, carrier, destination,
                   payload_bytes, compressed_bytes, wire_bytes, sms_segments,
                   template_id, compression_ratio, attempt_number, signal_strength,
-                  f"{t.tm_hour:02d}:{t.tm_min:02d}", 
-                  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][t.tm_wday],
+                  f"{t.tm_hour:02d}:{t.tm_min:02d}",
+                  ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][t.tm_wday],
                   queue_depth))
 
     def log_outcome(self, msg_id: str, outcome: str, latency_ms: float = 0,
@@ -78,16 +81,23 @@ class TransmissionLog:
             conn.execute("""
                 UPDATE transmission_log
                 SET outcome=?, latency_ms=?, error_code=?, handshake_latency_ms=?
-                WHERE msg_id=? AND outcome='SENDING'
-                ORDER BY timestamp DESC LIMIT 1
+                WHERE id = (
+                    SELECT id FROM transmission_log
+                    WHERE msg_id=? AND outcome='SENDING'
+                    ORDER BY timestamp DESC LIMIT 1
+                )
             """, (outcome, latency_ms, error_code, handshake_latency_ms, msg_id))
 
     def get_stats(self) -> dict:
         with sqlite3.connect(self.db_path) as conn:
-            total = conn.execute("SELECT COUNT(*) FROM transmission_log").fetchone()[0]
-            success = conn.execute("SELECT COUNT(*) FROM transmission_log WHERE outcome='SUCCESS'").fetchone()[0]
-            avg_latency = conn.execute("SELECT AVG(latency_ms) FROM transmission_log WHERE outcome='SUCCESS'").fetchone()[0]
-            avg_ratio = conn.execute("SELECT AVG(compression_ratio) FROM transmission_log WHERE compression_ratio > 0").fetchone()[0]
+            total = conn.execute(
+                "SELECT COUNT(*) FROM transmission_log").fetchone()[0]
+            success = conn.execute(
+                "SELECT COUNT(*) FROM transmission_log WHERE outcome='SUCCESS'").fetchone()[0]
+            avg_latency = conn.execute(
+                "SELECT AVG(latency_ms) FROM transmission_log WHERE outcome='SUCCESS'").fetchone()[0]
+            avg_ratio = conn.execute(
+                "SELECT AVG(compression_ratio) FROM transmission_log WHERE compression_ratio > 0").fetchone()[0]
         return {
             "total_transmissions": total,
             "successful": success,

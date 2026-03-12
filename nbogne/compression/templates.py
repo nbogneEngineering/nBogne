@@ -30,13 +30,14 @@ BUILTIN_TEMPLATES = {
             {"path": "encounter_date", "type": "date"},
             {"path": "encounter_type", "type": "code", "codebook": "encounter_type"},
             {"path": "practitioner_ref", "type": "string", "max_len": 36},
-            {"path": "systolic_bp", "type": "uint16"},
-            {"path": "diastolic_bp", "type": "uint16"},
-            {"path": "heart_rate", "type": "uint16"},
-            {"path": "temperature", "type": "float16"},  # degrees C * 10
+            {"path": "systolic_bp", "type": "uint8"},
+            {"path": "diastolic_bp", "type": "uint8"},
+            {"path": "heart_rate", "type": "uint8"},
+            {"path": "temperature", "type": "offset_uint8",
+                "offset": 25.0, "scale": 10},
             {"path": "spo2", "type": "uint8"},
             {"path": "weight_kg", "type": "float16"},  # kg * 10
-            {"path": "height_cm", "type": "uint16"},
+            {"path": "height_cm", "type": "uint8"},
             {"path": "diagnosis_1", "type": "code", "codebook": "icd10"},
             {"path": "diagnosis_2", "type": "code", "codebook": "icd10"},
             {"path": "diagnosis_3", "type": "code", "codebook": "icd10"},
@@ -70,13 +71,15 @@ BUILTIN_TEMPLATES = {
             {"path": "referral_date", "type": "date"},
             {"path": "from_facility", "type": "code", "codebook": "facility"},
             {"path": "to_facility", "type": "code", "codebook": "facility"},
-            {"path": "priority", "type": "uint8"},  # 1=routine, 2=urgent, 3=emergency
+            # 1=routine, 2=urgent, 3=emergency
+            {"path": "priority", "type": "uint8"},
             {"path": "reason_code", "type": "code", "codebook": "icd10"},
             {"path": "diagnosis_summary", "type": "text", "max_len": 200},
-            {"path": "systolic_bp", "type": "uint16"},
-            {"path": "diastolic_bp", "type": "uint16"},
-            {"path": "heart_rate", "type": "uint16"},
-            {"path": "temperature", "type": "float16"},
+            {"path": "systolic_bp", "type": "uint8"},
+            {"path": "diastolic_bp", "type": "uint8"},
+            {"path": "heart_rate", "type": "uint8"},
+            {"path": "temperature", "type": "offset_uint8",
+                "offset": 25.0, "scale": 10},
             {"path": "current_meds", "type": "text", "max_len": 100},
         ]
     },
@@ -182,11 +185,13 @@ class TemplateRegistry:
                 enc_type = r.get("type", [{}])
                 if enc_type:
                     codings = enc_type[0].get("coding", [{}])
-                    v["encounter_type"] = codings[0].get("code", "") if codings else ""
+                    v["encounter_type"] = codings[0].get(
+                        "code", "") if codings else ""
                 v["practitioner_ref"] = ""
                 participants = r.get("participant", [])
                 if participants:
-                    ref = participants[0].get("individual", {}).get("reference", "")
+                    ref = participants[0].get(
+                        "individual", {}).get("reference", "")
                     v["practitioner_ref"] = ref
 
             elif rt == "Observation":
@@ -216,7 +221,8 @@ class TemplateRegistry:
                         break
 
             elif rt == "MedicationRequest":
-                med = r.get("medicationCodeableConcept", {}).get("coding", [{}])
+                med = r.get("medicationCodeableConcept",
+                            {}).get("coding", [{}])
                 code = med[0].get("code", "") if med else ""
                 for i in range(1, 3):
                     key = f"medication_{i}"
@@ -249,17 +255,21 @@ class TemplateRegistry:
                 v["patient_ref"] = r.get("id", "")
             elif rt == "Observation":
                 v["observation_date"] = r.get("effectiveDateTime", "")[:10]
-                v["lab_code"] = r.get("code", {}).get("coding", [{}])[0].get("code", "")
+                v["lab_code"] = r.get("code", {}).get(
+                    "coding", [{}])[0].get("code", "")
                 vq = r.get("valueQuantity", {})
                 v["value"] = float(vq.get("value", 0))
                 v["unit"] = vq.get("unit", "")
                 ref_range = r.get("referenceRange", [{}])
                 if ref_range:
-                    v["reference_low"] = float(ref_range[0].get("low", {}).get("value", 0))
-                    v["reference_high"] = float(ref_range[0].get("high", {}).get("value", 0))
+                    v["reference_low"] = float(
+                        ref_range[0].get("low", {}).get("value", 0))
+                    v["reference_high"] = float(
+                        ref_range[0].get("high", {}).get("value", 0))
                 interp = r.get("interpretation", [{}])
                 if interp:
-                    v["interpretation"] = interp[0].get("coding", [{}])[0].get("code", "")
+                    v["interpretation"] = interp[0].get(
+                        "coding", [{}])[0].get("code", "")
                 perf = r.get("performer", [{}])
                 if perf:
                     v["performer_ref"] = perf[0].get("reference", "")
@@ -277,15 +287,21 @@ class TemplateRegistry:
                 v["patient_ref"] = r.get("id", "")
             elif rt == "ServiceRequest":
                 v["referral_date"] = r.get("authoredOn", "")[:10]
-                v["priority"] = {"routine": 1, "urgent": 2, "stat": 3}.get(r.get("priority", "routine"), 1)
-                v["reason_code"] = r.get("reasonCode", [{}])[0].get("coding", [{}])[0].get("code", "") if r.get("reasonCode") else ""
+                v["priority"] = {"routine": 1, "urgent": 2, "stat": 3}.get(
+                    r.get("priority", "routine"), 1)
+                v["reason_code"] = r.get("reasonCode", [{}])[0].get("coding", [{}])[
+                    0].get("code", "") if r.get("reasonCode") else ""
             elif rt == "Observation":
                 code = r.get("code", {}).get("coding", [{}])[0].get("code", "")
                 val = r.get("valueQuantity", {}).get("value", 0)
-                if code == "8480-6": v["systolic_bp"] = int(val)
-                elif code == "8462-4": v["diastolic_bp"] = int(val)
-                elif code == "8867-4": v["heart_rate"] = int(val)
-                elif code == "8310-5": v["temperature"] = float(val)
+                if code == "8480-6":
+                    v["systolic_bp"] = int(val)
+                elif code == "8462-4":
+                    v["diastolic_bp"] = int(val)
+                elif code == "8867-4":
+                    v["heart_rate"] = int(val)
+                elif code == "8310-5":
+                    v["temperature"] = float(val)
         return v
 
     def _extract_immunization(self, resource: dict) -> dict:
@@ -304,7 +320,8 @@ class TemplateRegistry:
 
     def _reconstruct_encounter(self, v: dict) -> dict:
         entries = []
-        entries.append({"resource": {"resourceType": "Patient", "id": v["patient_ref"]}})
+        entries.append(
+            {"resource": {"resourceType": "Patient", "id": v["patient_ref"]}})
         enc = {
             "resourceType": "Encounter", "status": "finished",
             "type": [{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": v["encounter_type"]}]}],
@@ -358,13 +375,16 @@ class TemplateRegistry:
             "valueQuantity": {"value": v["value"], "unit": v["unit"]},
         }
         if v["reference_low"] or v["reference_high"]:
-            obs["referenceRange"] = [{"low": {"value": v["reference_low"]}, "high": {"value": v["reference_high"]}}]
+            obs["referenceRange"] = [
+                {"low": {"value": v["reference_low"]}, "high": {"value": v["reference_high"]}}]
         if v["interpretation"]:
-            obs["interpretation"] = [{"coding": [{"code": v["interpretation"]}]}]
+            obs["interpretation"] = [
+                {"coding": [{"code": v["interpretation"]}]}]
         return {
             "resourceType": "Bundle", "type": "transaction",
             "entry": [
-                {"resource": {"resourceType": "Patient", "id": v["patient_ref"]}},
+                {"resource": {"resourceType": "Patient",
+                              "id": v["patient_ref"]}},
                 {"resource": obs},
             ]
         }

@@ -45,14 +45,18 @@ class TransmissionQueue:
                     carrier TEXT DEFAULT ''
                 )
             """)
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON queue(status)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_id ON queue(msg_id)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_status ON queue(status)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_msg_id ON queue(msg_id)")
 
     def enqueue(self, id: str, msg_id: bytes, destination: str, wire_data: bytes,
-                segments: list[str], patient_record_id: str = "",
+                segments: list[bytes], patient_record_id: str = "",
                 fhir_resource_type: str = "", raw_size: int = 0,
                 compressed_size: int = 0, template_id: int = 0):
         """Add a transmission to the queue."""
+        # Hex-encode binary segments for JSON storage
+        segments_hex = [seg.hex() for seg in segments]
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO queue
@@ -60,10 +64,11 @@ class TransmissionQueue:
                  patient_record_id, fhir_resource_type, raw_size, compressed_size,
                  wire_size, sms_segment_count, template_id, status, created_at, retry_count)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, 0)
-            """, (id, msg_id, destination, wire_data, json.dumps(segments),
+            """, (id, msg_id, destination, wire_data, json.dumps(segments_hex),
                   patient_record_id, fhir_resource_type, raw_size, compressed_size,
                   len(wire_data), len(segments), template_id, time.time()))
-        log.info(f"Enqueued {id}: {len(segments)} segments, {len(wire_data)}B wire")
+        log.info(
+            f"Enqueued {id}: {len(segments)} segments, {len(wire_data)}B wire")
 
     def get_pending(self) -> list[dict]:
         """Get all pending transmissions ready for (re)sending."""
@@ -111,15 +116,18 @@ class TransmissionQueue:
     def get_by_msg_id(self, msg_id: bytes) -> Optional[dict]:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
-            row = conn.execute("SELECT * FROM queue WHERE msg_id=?", (msg_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM queue WHERE msg_id=?", (msg_id,)).fetchone()
         return dict(row) if row else None
 
     def get_stats(self) -> dict:
         with sqlite3.connect(self.db_path) as conn:
-            rows = conn.execute("SELECT status, COUNT(*) as cnt FROM queue GROUP BY status").fetchall()
+            rows = conn.execute(
+                "SELECT status, COUNT(*) as cnt FROM queue GROUP BY status").fetchall()
         return {r[0]: r[1] for r in rows}
 
     def cleanup_completed(self, older_than_hours: int = 24):
         cutoff = time.time() - (older_than_hours * 3600)
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("DELETE FROM queue WHERE status='COMPLETE' AND completed_at < ?", (cutoff,))
+            conn.execute(
+                "DELETE FROM queue WHERE status='COMPLETE' AND completed_at < ?", (cutoff,))

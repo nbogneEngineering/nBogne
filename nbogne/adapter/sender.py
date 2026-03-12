@@ -41,11 +41,11 @@ class SendingAdapter:
         log.info(f"Compressed: {result.original_size}B → {result.compressed_size}B "
                  f"({result.ratio:.1f}x, method={result.method})")
 
-        # Step 2: Encrypt L1 (E2EE)
-        encrypted_l1 = encrypt_l1(result.compressed, L1_KEY)
+        # Step 2: Generate msg_id and encrypt L1 (E2EE — nonce derived from msg_id)
+        msg_id = generate_msg_id()
+        encrypted_l1 = encrypt_l1(result.compressed, L1_KEY, msg_id)
 
         # Step 3: Build wire packet
-        msg_id = generate_msg_id()
         ptype = PacketType.TEMPLATED if result.template_id > 0 else PacketType.FALLBACK
         packet = WirePacket(
             msg_id=msg_id,
@@ -78,7 +78,8 @@ class SendingAdapter:
         )
 
         # Step 7: Send immediately
-        self._send_from_queue(queue_id, segments, msg_id, result, patient_record_id)
+        self._send_from_queue(queue_id, segments, msg_id,
+                              result, patient_record_id)
 
         elapsed = (time.time() - start) * 1000
         log.info(f"Pipeline complete in {elapsed:.0f}ms: {result.original_size}B → "
@@ -108,16 +109,18 @@ class SendingAdapter:
         if success:
             self.queue.mark_sent(queue_id)
             self.tx_log.log_outcome(msg_id.hex(), "SENT")
-            log.info(f"Sent {len(segments)} SMS segments for msg_id={msg_id.hex()}")
+            log.info(
+                f"Sent {len(segments)} SMS segments for msg_id={msg_id.hex()}")
         else:
             self.queue.mark_retry(queue_id, "SMS send failed")
-            self.tx_log.log_outcome(msg_id.hex(), "FAILED", error_code="SEND_FAIL")
+            self.tx_log.log_outcome(
+                msg_id.hex(), "FAILED", error_code="SEND_FAIL")
             log.warning(f"Send failed for {queue_id}, will retry")
 
-    def process_incoming_sms(self, sms_text: str, from_number: str):
-        """Process incoming SMS (handshake ACK from server)."""
+    def process_incoming_sms(self, sms_data: bytes, from_number: str):
+        """Process incoming binary SMS (handshake ACK from server)."""
         try:
-            wire_bytes = sms_segments_to_packet([sms_text])
+            wire_bytes = sms_segments_to_packet([sms_data])
             decrypted = decrypt_l2(wire_bytes, L2_KEY)
             packet = WirePacket.decode(decrypted)
 
@@ -129,7 +132,8 @@ class SendingAdapter:
                     ack.msg_id.hex(), "SUCCESS",
                     handshake_latency_ms=elapsed
                 )
-                log.info(f"ACK received for msg_id={ack.msg_id.hex()} ({elapsed:.0f}ms)")
+                log.info(
+                    f"ACK received for msg_id={ack.msg_id.hex()} ({elapsed:.0f}ms)")
         except Exception as e:
             log.error(f"Failed to process incoming SMS: {e}")
 
@@ -137,10 +141,14 @@ class SendingAdapter:
         """Retry any pending/failed transmissions."""
         pending = self.queue.get_pending()
         for item in pending:
-            segments = json.loads(item["segments_json"])
-            log.info(f"Retrying {item['id']} (attempt {item['retry_count'] + 1})")
+            # Segments stored as hex strings in JSON; decode back to bytes
+            segments = [bytes.fromhex(s)
+                        for s in json.loads(item["segments_json"])]
+            log.info(
+                f"Retrying {item['id']} (attempt {item['retry_count'] + 1})")
             self.queue.mark_sending(item["id"])
-            success = self.transport.send_segments(item["destination"], segments)
+            success = self.transport.send_segments(
+                item["destination"], segments)
             if success:
                 self.queue.mark_sent(item["id"])
             else:

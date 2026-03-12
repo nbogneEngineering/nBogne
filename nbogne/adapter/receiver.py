@@ -28,35 +28,31 @@ class ReceivingAdapter:
         self.transport = transport
         self.forward_to = forward_to
         self.pipeline = CompressionPipeline()
-        self._segment_buffer: dict[str, list[str]] = {}  # msg fragments awaiting reassembly
+        # msg fragments awaiting reassembly
+        self._segment_buffer: dict[str, list[str]] = {}
 
-    def receive_sms(self, sms_text: str, from_number: str) -> Optional[dict]:
-        """Process an incoming SMS. May buffer if multi-segment.
+    def receive_sms(self, sms_data: bytes, from_number: str) -> Optional[dict]:
+        """Process an incoming binary SMS segment. May buffer if multi-segment.
         Returns the reconstructed FHIR JSON if complete, None if still buffering."""
 
-        # Check if this is a segmented message
-        if '/' in sms_text[:5] and ':' in sms_text[:6]:
-            idx = int(sms_text[:2])
-            total = int(sms_text[3:5])
-            # Use from_number as buffer key (one message per sender at a time)
-            key = from_number
+        # Parse binary segment header: [1B index][1B total][data]
+        idx = sms_data[0]
+        total = sms_data[1]
+        key = from_number
 
-            if key not in self._segment_buffer:
-                self._segment_buffer[key] = []
-            self._segment_buffer[key].append(sms_text)
+        if key not in self._segment_buffer:
+            self._segment_buffer[key] = []
+        self._segment_buffer[key].append(sms_data)
 
-            if len(self._segment_buffer[key]) < total:
-                log.info(f"Buffering segment {idx}/{total} from {from_number}")
-                return None
+        if len(self._segment_buffer[key]) < total:
+            log.info(f"Buffering segment {idx}/{total} from {from_number}")
+            return None
 
-            # All segments received — process
-            segments = self._segment_buffer.pop(key)
-        else:
-            segments = [sms_text]
-
+        # All segments received — process
+        segments = self._segment_buffer.pop(key)
         return self._process_complete_message(segments, from_number)
 
-    def _process_complete_message(self, segments: list[str], from_number: str) -> Optional[dict]:
+    def _process_complete_message(self, segments: list[bytes], from_number: str) -> Optional[dict]:
         try:
             start = time.time()
 
@@ -71,11 +67,12 @@ class ReceivingAdapter:
             log.info(f"Received msg_id={packet.msg_id.hex()}, template={packet.template_id}, "
                      f"type={packet.packet_type.name}")
 
-            # Step 4: Decrypt L1 (E2EE)
-            compressed = decrypt_l1(packet.payload, L1_KEY)
+            # Step 4: Decrypt L1 (E2EE) — nonce derived from msg_id
+            compressed = decrypt_l1(packet.payload, L1_KEY, packet.msg_id)
 
             # Step 5: Decompress → FHIR JSON
-            fhir_json = self.pipeline.decompress(compressed, packet.template_id)
+            fhir_json = self.pipeline.decompress(
+                compressed, packet.template_id)
 
             elapsed = (time.time() - start) * 1000
             fhir_size = len(json.dumps(fhir_json))
@@ -101,7 +98,8 @@ class ReceivingAdapter:
         elif self.forward_to == "dhis2":
             url = f"{DHIS2_URL}/fhir"
         else:
-            log.info(f"Forward target '{self.forward_to}' — skipping HTTP POST")
+            log.info(
+                f"Forward target '{self.forward_to}' — skipping HTTP POST")
             return
 
         try:
